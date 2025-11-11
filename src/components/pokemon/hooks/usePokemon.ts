@@ -1,8 +1,8 @@
-import { pokemonUrl } from "../constants";
+import { pokemonUri } from "../../../constants";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
-const getPokemons = async () => {
-  const response = await fetch(`${pokemonUrl}`);
+const getPokemons = async (limit?: number) => {
+  const response = await fetch(`${pokemonUri}?limit=${limit}`);
   if (!response.ok) {
     throw new Error('Network call error');
   }
@@ -10,7 +10,7 @@ const getPokemons = async () => {
 }
 
 const getPokemon = async (id: number) => {
-  const response = await fetch(`${pokemonUrl}/${id}`);
+  const response = await fetch(`${pokemonUri}/${id}`);
   if (!response.ok) {
     throw new Error('Network response was not ok');
   }
@@ -20,24 +20,24 @@ const getPokemon = async (id: number) => {
 export const useQueryPokemon = (id: number) => {
   return useQuery({
     queryKey: ['pokemon', id],
-    queryFn: () => getPokemon,
+    queryFn: () => getPokemon(id),
     enabled: !!id, // only run the query if id is truthy
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
-export const useQueryPokemons = () => {
+export const useQueryPokemons = (limit?: number) => {
   return useQuery({
     queryKey: ['pokemons'],
-    queryFn: () => getPokemons,
-    staleTime: 10 * 60 * 1000,
+    queryFn: () => getPokemons(limit),
+    staleTime: 10 * 60 * 1000, // 10 minutes
   })
 }
 
 export const useUpdatePokemon = (id: number, data: any) => {
   return useMutation({
     mutationFn: async () => {
-      const response = await fetch(`${pokemonUrl}/${id}`, {
+      const response = await fetch(`${pokemonUri}/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

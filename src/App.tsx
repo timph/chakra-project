@@ -1,51 +1,73 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
-import { Container, HStack, Link, Heading, Button, Code, Image, Text } from '@chakra-ui/react'
-import { useQueryPokemon, useQueryPokemons } from './hooks/usePokemon'
+import { Text, Box, HStack, Input, VStack } from '@chakra-ui/react'
+import { useEffect, useRef, useState } from 'react';
+import Page from './components/Page';
+import { tickerService, type Company, type CompanySymbol } from './TickerService';
+import { debounce } from './utils/debounce';
+
 
 function App() {
-  const [count, setCount] = useState(0)
-  const pokeId = 10;
-  const {data: pokemons, isLoading: pokemonsLoading} = useQueryPokemons();
-  const {data: pokemon, isLoading: pokemonLoading} = useQueryPokemon(pokeId);
-  console.log({ pokemon, pokemons })
+  const [symbol, setSymbol] = useState<CompanySymbol>("");
+  const [watchedCompany, setWatchedCompany] = useState<Company[]>([]);
+  const [results, setResults] = useState<Company[]>([]);
+  const waitRef = useRef<number>(new Date().getTime());
+
+  const updatedCallback = (companies: Company[]) => {
+    const currentTime = new Date().getTime();
+    if (currentTime > waitRef.current + 2000 ) {
+      setWatchedCompany(companies);
+      waitRef.current = currentTime;
+    }
+  };
+  tickerService.onDataChanged(updatedCallback);
+
+  useEffect(() => {
+    const retrieveCompanies = async () => {
+      const res = await tickerService.search(symbol);
+      setResults(res.results);
+    }
+    
+    retrieveCompanies();
+
+  }, [symbol])
+
+  const searchStock = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const values = e.target.value;
+    if (values.length >= 2) {
+      debounce(setSymbol, 300)(values);
+    }
+  }
+
+  const addWatch = (symbol: string) => {
+    tickerService.watch(symbol);
+  }
 
   return (
-    <Container centerContent py={8}>
-      <HStack gap={6} mb={4}>
-        <Link href="https://vite.dev">
-          <Image src={viteLogo} boxSize="64px" alt="Vite logo" />
-        </Link>
-        <Link href="https://react.dev">
-          <Image src={reactLogo} boxSize="64px" alt="React logo" />
-        </Link>
-      </HStack>
-
-      <Heading as="h1" size="lg" mb={4}>
-        Vite + React
-      </Heading>
+    <Page title="Stock picker app" margin="0 10%">
 
       <HStack p={6} borderWidth="1px" borderRadius="md" mb={4} justifyContent="center" alignItems="center">
-        <Button color="blue" bg="aqua" borderColor="ActiveBorder" 
-          onClick={() => setCount((c) => c + 1)}
-          minW="1.5"
-        >
-          Count is {count}
-        </Button>
-        <Text>
-          Edit <Code>src/App.tsx</Code> and save to test HMR
-        </Text>
-        <Button color="white" bg="purple" borderColor="ActiveBorder" 
-          onClick={() => setCount(0)}
-        >
-          Clear
-        </Button>
+        <Input name="symbol" onChange={searchStock}></Input>
       </HStack>
+      <VStack gap={2}>
+        {results && results.map(company =>
+          <div onClick={() => addWatch(company.symbol)}>{company.name} ({company.symbol})</div>
+        )}
+      </VStack>
+      <br/>
+      <VStack>
+          <>
+            <Text as={'h2'}>Live Results</Text>
+              {watchedCompany && watchedCompany.map(company =>
+                  <HStack gap={6}>
+                    <Box>{company.symbol}</Box>
+                    <Box>{company.name}</Box>
+                    <Box>{company.lastPrice}</Box>
+                  </HStack>
+              )}
+          </>
+      </VStack>
 
-      <Text color="gray.500">Click on the Vite and React logos to learn more</Text>
-    </Container>
+    </Page>
   )
 }
 
