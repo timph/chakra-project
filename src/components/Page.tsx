@@ -15,8 +15,8 @@ export default function Page({
   ...boxProps
 }: PageProps) {
   return (
-    <Center as="main" {...boxProps}>
-      <Container maxW={maxWidth}>
+    <Center >
+      <Container as="main" width='6xl' maxW={maxWidth} {...boxProps}>
         {title && (
           <Heading as="h1" mb={6} textAlign="center">
             {title}
